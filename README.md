@@ -1,3 +1,12 @@
+### This is a managed fork of the main GRDB project that automatically enables SQLCipher encryption.
+
+Please see the [encryption section](#creating-or-opening-an-encrypted-database) for examples of using GRDB with SQLCipher.
+
+The [SQLCipher community forum](https://discuss.zetetic.net/c/sqlcipher) is a good place to ask questions about SQLCipher.
+
+[SQLCipher Commercial/Enterprise licensing](https://www.zetetic.net/sqlcipher/commercial/) with support is available separately through Zetetic.
+
+
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/groue/GRDB.swift/master/GRDB~dark.png">
     <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/groue/GRDB.swift/master/GRDB.png">
