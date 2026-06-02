@@ -383,13 +383,10 @@ extension PersistableRecord {
     func upsertWithCallbacks(_ db: Database)
     throws -> InsertionSuccess
     {
-        let (inserted, _) = try upsertAndFetchWithCallbacks(
+        try upsertWithCallbacks(
             db, onConflict: [],
             updating: .allColumns,
-            doUpdate: nil,
-            selection: [],
-            decode: { _ in /* Nothing to decode */ })
-        return inserted
+            doUpdate: nil)
     }
     
     @inlinable // allow specialization so that empty callbacks are removed
@@ -419,5 +416,29 @@ extension PersistableRecord {
         }
         didInsert(success.inserted)
         return success
+    }
+    
+    @inlinable // allow specialization so that empty callbacks are removed
+    func upsertWithCallbacks(
+        _ db: Database,
+        onConflict conflictTarget: [String],
+        updating strategy: UpsertUpdateStrategy,
+        doUpdate assignments: ((_ excluded: TableAlias<Self>) -> [ColumnAssignment])?
+    ) throws -> InsertionSuccess {
+        try willInsert(db)
+        
+        var inserted: InsertionSuccess?
+        try aroundInsert(db) {
+            inserted = try upsertWithoutCallbacks(
+                db, onConflict: conflictTarget,
+                updating: strategy, doUpdate: assignments)
+            return inserted!
+        }
+        
+        guard let inserted else {
+            try persistenceCallbackMisuse("aroundInsert")
+        }
+        didInsert(inserted)
+        return inserted
     }
 }

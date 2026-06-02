@@ -97,7 +97,7 @@ do {
 
 **Transaction observers can choose the database changes they are interested in.**
 
-The ``observes(eventsOfKind:)`` method filters events that are notified to ``databaseDidChange(with:)``. It is the most efficient and recommended change filtering technique, because it is only called once before a database query is executed, and can completely disable change tracking:
+By default, the ``observes(eventsOfKind:)`` method filters events that are notified to ``databaseDidChange(with:)``. It is the most efficient and recommended change filtering technique, because it is only called once before a database query is executed, and can completely disable change tracking:
 
 ```swift
 // Calls `observes(eventsOfKind:)` once.
@@ -124,6 +124,8 @@ class PlayerObserver: TransactionObserver {
 ```
 
 When the `observes(eventsOfKind:)` method returns false for all event kinds, the observer is still notified of transactions.
+
+The filtering performed by ``observes(eventsOfKind:)`` makes a transaction observer unaware of changes performed by SQLite statements that are not a `DELETE`, `INSERT` or `UPDATE` statement compiled and executed by GRDB. You can lift this limitation with the ``TransactionObserver/databaseEventObservationStrategy``.
 
 ## Observation Extent
 
@@ -232,7 +234,7 @@ The changes and transactions that are not automatically notified to transaction 
 
 - Read-only transactions.
 - Changes and transactions performed by external database connections.
-- Changes performed by SQLite statements that are not both compiled and executed through GRDB APIs.
+- Changes performed by SQLite statements that are not a `DELETE`, `INSERT` or `UPDATE` statement compiled and executed by GRDB (this limitation can be lifted, in your custom `TransactionObserver` type, with ``TransactionObserver/databaseEventObservationStrategy``).
 - Changes to the database schema, changes to internal system tables such as `sqlite_master`.
 - Changes to [`WITHOUT ROWID`](https://www.sqlite.org/withoutrowid.html) tables.
 - The deletion of duplicate rows triggered by [`ON CONFLICT REPLACE`](https://www.sqlite.org/lang_conflict.html) clauses (this last exception might change in a future release of SQLite).
@@ -265,8 +267,10 @@ try dbQueue.write { db in
 
 ### Filtering Database Changes
 
+- ``databaseEventObservationStrategy``
 - ``observes(eventsOfKind:)``
 - ``DatabaseEventKind``
+- ``DatabaseEventObservationStrategy``
 
 ### Handling Database Changes
 

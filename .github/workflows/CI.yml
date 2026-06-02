@@ -107,23 +107,23 @@ jobs:
       - uses: actions/checkout@v5
       - name: ${{ matrix.name }}
         run: make test_framework_SQLCipher4Encrypted
-  CustomSQLite:
-    name: CustomSQLite
-    runs-on: ${{ matrix.runsOn }}
-    env:
-      DEVELOPER_DIR: "/Applications/${{ matrix.xcode }}/Contents/Developer"
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - xcode: "Xcode_16.4.app"
-            runsOn: macOS-15
-            name: "Xcode 16.4"
-    steps:
-      - uses: actions/checkout@v5
-      - name: ${{ matrix.name }}
-        run: make test_framework_GRDBCustomSQLiteOSX
+  # CustomSQLite:
+  #   name: CustomSQLite
+  #   runs-on: ${{ matrix.runsOn }}
+  #   env:
+  #     DEVELOPER_DIR: "/Applications/${{ matrix.xcode }}/Contents/Developer"
+  #   timeout-minutes: 60
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - xcode: "Xcode_16.4.app"
+  #           runsOn: macOS-15
+  #           name: "Xcode 16.4"
+  #   steps:
+  #     - uses: actions/checkout@v5
+  #     - name: ${{ matrix.name }}
+  #       run: make test_framework_GRDBCustomSQLiteOSX
   XCFramework:
     name: XCFramework
     runs-on: ${{ matrix.runsOn }}

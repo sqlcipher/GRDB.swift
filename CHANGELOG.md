@@ -7,6 +7,7 @@ GRDB adheres to [Semantic Versioning](https://semver.org/), with one exception: 
 
 #### 7.x Releases
 
+- `7.11.x` Releases - [7.11.0](#7110)
 - `7.10.x` Releases - [7.10.0](#7100)
 - `7.9.x` Releases - [7.9.0](#790)
 - `7.8.x` Releases - [7.8.0](#780)
@@ -142,9 +143,16 @@ GRDB adheres to [Semantic Versioning](https://semver.org/), with one exception: 
 
 ---
 
+## 7.11.0
+
+Released June 1, 2026
+
+- **New**: Add option to disable database change filtering in `TransactionObserver` by [@simolus3](https://github.com/simolus3) in [#1864](https://github.com/groue/GRDB.swift/pull/1864)
+- **Fixed**: Fix upsert for WITHOUT ROWID tables by [@groue](https://github.com/groue) in [#1858](https://github.com/groue/GRDB.swift/pull/1858)
+
 ## 7.10.0
 
-Released February 15, 2025
+Released February 15, 2026
 
 - **Documentation fixes** by [@bellebethcooper](https://github.com/bellebethcooper), [@Cykelero](https://github.com/Cykelero), and [@leejungyeob](https://github.com/leejungyeob) in [#1842](https://github.com/groue/GRDB.swift/pull/1842), [#1846](https://github.com/groue/GRDB.swift/pull/1846), [#1848](https://github.com/groue/GRDB.swift/pull/1848)
 - **New**: Linux adjustments by [@thinkpractice](https://github.com/thinkpractice) in [#1825](https://github.com/groue/GRDB.swift/pull/1825)
