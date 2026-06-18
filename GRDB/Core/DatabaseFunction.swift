@@ -10,6 +10,8 @@ import SQLCipher
 import GRDBSQLite
 #endif
 
+import Foundation
+
 /// A custom SQL function or aggregate.
 ///
 /// ## Topics

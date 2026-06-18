@@ -7,7 +7,7 @@ GRDB adheres to [Semantic Versioning](https://semver.org/), with one exception: 
 
 #### 7.x Releases
 
-- `7.11.x` Releases - [7.11.0](#7110)
+- `7.11.x` Releases - [7.11.0](#7110) - [7.11.1](#7111)
 - `7.10.x` Releases - [7.10.0](#7100)
 - `7.9.x` Releases - [7.9.0](#790)
 - `7.8.x` Releases - [7.8.0](#780)
@@ -142,6 +142,12 @@ GRDB adheres to [Semantic Versioning](https://semver.org/), with one exception: 
 - [0.110.0](#01100), ...
 
 ---
+
+## 7.11.1
+
+Released June 18, 2026
+
+- **New**: Make migration registration an O(1) operation [@MarkusSintonen](https://github.com/MarkusSintonen) in [#1869](https://github.com/groue/GRDB.swift/pull/1869)
 
 ## 7.11.0
 

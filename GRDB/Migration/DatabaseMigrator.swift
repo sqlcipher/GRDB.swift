@@ -111,7 +111,7 @@ public struct DatabaseMigrator: Sendable {
     /// See also ``hasSchemaChanges(_:)``.
     public var eraseDatabaseOnSchemaChange = false
     private var defersForeignKeyChecks = true
-    private var _migrations: [Migration] = []
+    private var _migrations: OrderedDictionary<String, Migration> = [:]
     
     /// A new migrator.
     public init() {
@@ -349,10 +349,10 @@ public struct DatabaseMigrator: Sendable {
     /// - parameter writer: A DatabaseWriter.
     /// - throws: The error thrown by the first failed migration.
     public func migrate(_ writer: any DatabaseWriter) throws {
-        guard let lastMigration = _migrations.last else {
+        guard let lastMigrationIdentifier = _migrations.keys.last else {
             return
         }
-        try migrate(writer, upTo: lastMigration.identifier)
+        try migrate(writer, upTo: lastMigrationIdentifier)
     }
     
     /// Runs all unapplied migrations, in the same order as they
@@ -387,8 +387,8 @@ public struct DatabaseMigrator: Sendable {
         writer.asyncBarrierWriteWithoutTransaction { dbResult in
             do {
                 let db = try dbResult.get()
-                if let lastMigration = _migrations.last {
-                    try migrate(db, upTo: lastMigration.identifier)
+                if let lastMigrationIdentifier = _migrations.keys.last {
+                    try migrate(db, upTo: lastMigrationIdentifier)
                 }
                 completion(.success(db))
             } catch {
@@ -426,14 +426,13 @@ public struct DatabaseMigrator: Sendable {
     ///
     public func hasSchemaChanges(_ db: Database) throws -> Bool {
         let appliedIdentifiers = try appliedIdentifiers(db)
-        let knownIdentifiers = Set(_migrations.map { $0.identifier })
+        let knownIdentifiers = Set(_migrations.keys)
         if !appliedIdentifiers.isSubset(of: knownIdentifiers) {
             // Database contains an unknown migration
             return true
         }
         
-        if let lastAppliedIdentifier = _migrations
-            .map(\.identifier)
+        if let lastAppliedIdentifier = _migrations.keys
             .last(where: { appliedIdentifiers.contains($0) })
         {
             // Some migrations were already applied.
@@ -492,7 +491,7 @@ public struct DatabaseMigrator: Sendable {
     /// The list of registered migration identifiers, in the same order as they
     /// have been registered.
     public var migrations: [String] {
-        _migrations.map(\.identifier)
+        _migrations.keys
     }
     
     /// Returns the identifiers of registered and applied migrations, in the
@@ -502,7 +501,7 @@ public struct DatabaseMigrator: Sendable {
     /// - throws: A ``DatabaseError`` whenever an SQLite error occurs.
     public func appliedMigrations(_ db: Database) throws -> [String] {
         let appliedIdentifiers = try self.appliedIdentifiers(db)
-        return _migrations.map { $0.identifier }.filter { appliedIdentifiers.contains($0) }
+        return _migrations.keys.filter { appliedIdentifiers.contains($0) }
     }
     
     /// Returns the applied migration identifiers, even unregistered ones.
@@ -531,7 +530,7 @@ public struct DatabaseMigrator: Sendable {
     /// - throws: A ``DatabaseError`` whenever an SQLite error occurs.
     public func completedMigrations(_ db: Database) throws -> [String] {
         let appliedIdentifiers = try appliedMigrations(db)
-        let knownIdentifiers = _migrations.map(\.identifier)
+        let knownIdentifiers = _migrations.keys
         return zip(appliedIdentifiers, knownIdentifiers)
             .prefix(while: { (applied: String, known: String) in applied == known })
             .map { $0.0 }
@@ -543,7 +542,7 @@ public struct DatabaseMigrator: Sendable {
     /// - parameter db: A database connection.
     /// - throws: A ``DatabaseError`` whenever an SQLite error occurs.
     public func hasCompletedMigrations(_ db: Database) throws -> Bool {
-        try completedMigrations(db).last == _migrations.last?.identifier
+        try completedMigrations(db).last == _migrations.keys.last
     }
     
     /// A boolean value indicating whether the database refers to
@@ -556,7 +555,7 @@ public struct DatabaseMigrator: Sendable {
     /// - throws: A ``DatabaseError`` whenever an SQLite error occurs.
     public func hasBeenSuperseded(_ db: Database) throws -> Bool {
         let appliedIdentifiers = try self.appliedIdentifiers(db)
-        let knownIdentifiers = _migrations.map(\.identifier)
+        let knownIdentifiers = _migrations.keys
         return appliedIdentifiers.contains { !knownIdentifiers.contains($0) }
     }
     
@@ -574,41 +573,43 @@ public struct DatabaseMigrator: Sendable {
     
     private mutating func registerMigration(_ migration: Migration) {
         GRDBPrecondition(
-            !_migrations.map({ $0.identifier }).contains(migration.identifier),
+            _migrations[migration.identifier] == nil,
             "already registered migration: \(String(reflecting: migration.identifier))")
-        _migrations.append(migration)
+        _migrations.appendValue(migration, forKey: migration.identifier)
     }
     
     /// Returns unapplied migration executions
     private func unappliedExecutions(upTo targetIdentifier: String, appliedIdentifiers: Set<String>) -> [Execution] {
-        var expectedMigrations: [Migration] = []
-        for migration in _migrations {
-            expectedMigrations.append(migration)
-            if migration.identifier == targetIdentifier {
+        var executions: [Execution] = []
+        var foundTarget = false
+        
+        for (identifier, migration) in _migrations {
+            if appliedIdentifiers.contains(identifier) {
+                if !migration.mergedIdentifiers.isDisjoint(with: appliedIdentifiers) {
+                    // Migration is applied, but we have some merged identifiers to delete
+                    executions.append(Execution(migration: migration, mode: .deleteMergedIdentifiers))
+                }
+            } else {
+                // Migration is not applied yet.
+                let appliedMergedIdentifiers = migration.mergedIdentifiers.intersection(appliedIdentifiers)
+                executions.append(Execution(
+                    migration: migration,
+                    mode: .run(mergedIdentifiers: appliedMergedIdentifiers)
+                ))
+            }
+            
+            if identifier == targetIdentifier {
+                foundTarget = true
                 break
             }
         }
         
         // targetIdentifier must refer to a registered migration
         GRDBPrecondition(
-            expectedMigrations.last?.identifier == targetIdentifier,
+            foundTarget,
             "undefined migration: \(String(reflecting: targetIdentifier))")
         
-        return expectedMigrations.compactMap { migration in
-            if appliedIdentifiers.contains(migration.identifier) {
-                if migration.mergedIdentifiers.isDisjoint(with: appliedIdentifiers) {
-                    // Nothing to do
-                    return nil
-                } else {
-                    // Migration is applied, but we have some merged identifiers to delete
-                    return Execution(migration: migration, mode: .deleteMergedIdentifiers)
-                }
-            } else {
-                // Migration is not applied yet.
-                let appliedMergedIdentifiers = migration.mergedIdentifiers.intersection(appliedIdentifiers)
-                return Execution(migration: migration, mode: .run(mergedIdentifiers: appliedMergedIdentifiers))
-            }
-        }
+        return executions
     }
     
     private func runMigrations(_ db: Database, upTo targetIdentifier: String) throws {
@@ -616,9 +617,9 @@ public struct DatabaseMigrator: Sendable {
         
         // Subsequent migration must not be applied
         let appliedMigrations = try self.appliedMigrations(db) // Only known ids
-        if let targetIndex = _migrations.firstIndex(where: { $0.identifier == targetIdentifier }),
+        if let targetIndex = _migrations.keys.firstIndex(of: targetIdentifier),
            let lastAppliedMigration = appliedMigrations.last,
-           let lastAppliedIndex = _migrations.firstIndex(where: { $0.identifier == lastAppliedMigration }),
+           let lastAppliedIndex = _migrations.keys.firstIndex(of: lastAppliedMigration),
            targetIndex < lastAppliedIndex
         {
             fatalError("database is already migrated beyond migration \(String(reflecting: targetIdentifier))")

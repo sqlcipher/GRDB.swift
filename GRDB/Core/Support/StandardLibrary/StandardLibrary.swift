@@ -10,6 +10,8 @@ import SQLCipher
 import GRDBSQLite
 #endif
 
+import Foundation
+
 // MARK: - Value Types
 
 /// Bool adopts DatabaseValueConvertible and StatementColumnConvertible.

@@ -1016,18 +1016,23 @@ class ValueObservationTests: GRDBTestCase {
                 return "cancelled loop"
             }
             
-            // Lanch the task that cancels
+            // Launch the task that cancels
             Task {
-                let observation = ValueObservation.trackingConstantRegion(Table("t").fetchCount)
-                for try await count in observation.values(in: writer) {
-                    if count >= 3 {
-                        cancelledTask.cancel()
-                        break
-                    } else {
-                        try await writer.write {
-                            try $0.execute(sql: "INSERT INTO t DEFAULT VALUES")
+                do {
+                    let observation = ValueObservation.trackingConstantRegion(Table("t").fetchCount)
+                    for try await count in observation.values(in: writer) {
+                        if count >= 3 {
+                            cancelledTask.cancel()
+                            break
+                        } else {
+                            try await writer.write {
+                                try $0.execute(sql: "INSERT INTO t DEFAULT VALUES")
+                            }
                         }
                     }
+                } catch {
+                    XCTFail("Unexpected error: \(error)")
+                    cancelledTask.cancel()
                 }
             }
             
